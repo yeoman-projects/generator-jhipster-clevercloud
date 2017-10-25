@@ -1,0 +1,9 @@
+{
+  "build": {
+    "type": "gradle",
+    "goal": "-Pprod bootRepackage -x test"
+  },
+  "deploy": {
+	"jarName": "./target/<%=baseName %>-<%=version %>.war"
+  }
+}

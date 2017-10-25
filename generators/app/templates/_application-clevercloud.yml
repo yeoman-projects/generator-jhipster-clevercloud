@@ -1,0 +1,25 @@
+spring:
+<%_ if (prodDatabaseType === 'postgresql') { _%>
+    datasource:
+        type: com.zaxxer.hikari.HikariDataSource        
+        url: jdbc:mysql://${POSTGRESQL_ADDON_HOST}:${POSTGRESQL_ADDON_PORT}/${POSTGRESQL_ADDON_DB}?useUnicode=true&characterEncoding=utf8&useSSL=false
+        username: ${POSTGRESQL_ADDON_USER}
+        password: ${POSTGRESQL_ADDON_PASSWORD}
+        hikari:
+            maximumPoolSize: 8
+<%_ } else if (prodDatabaseType === 'mysql') { _%>
+    datasource:
+        type: com.zaxxer.hikari.HikariDataSource        
+        url: jdbc:mysql://${MYSQL_ADDON_HOST}:${MYSQL_ADDON_PORT}/${MYSQL_ADDON_DB}?useUnicode=true&characterEncoding=utf8&useSSL=false
+        username: ${MYSQL_ADDON_USER}
+        password: ${MYSQL_ADDON_PASSWORD}
+        hikari:
+            maximumPoolSize: 8
+<%_ } else if (prodDatabaseType === 'mongodb') { _%>
+    data:
+        mongodb:
+            uri: mongodb://${MONGODB_ADDON_HOST}:${MONGODB_ADDON_PORT}?authMode=scram-sha1
+            database: ${MONGODB_ADDON_DB}
+            username: ${MONGODB_ADDON_USER}
+            password: ${MONGODB_ADDON_PASSWORD}
+<%_ } _%>
