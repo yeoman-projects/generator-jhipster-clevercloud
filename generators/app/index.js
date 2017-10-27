@@ -171,9 +171,6 @@ module.exports = class extends BaseGenerator {
     }
 
     writing() {
-        this.log("YOUR VARIABLES: \n");
-        this.log(this.props);
-        this.log("ENF VARIABLES: \n");
         // function to use directly template
         this.template = function (source, destination) {
             this.fs.copyTpl(
