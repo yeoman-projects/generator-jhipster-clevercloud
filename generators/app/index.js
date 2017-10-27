@@ -38,7 +38,8 @@ module.exports = class extends BaseGenerator {
                 exec('clever --version', (err, stdout) => {
                     if (err) {
                         this.log(`${chalk.yellow.bold('WARNING!')} You don't have clever tools installed.`);
-                        this.log('    Read https://www.clever-cloud.com/doc/clever-tools/getting_started/#installing-clever-tools');
+                        this.log(`${chalk.yellow.bold('WARNING!')}  Learn how to install it on https://www.clever-cloud.com/doc/clever-tools/getting_started/#installing-clever-tools`);
+                        this.log(`${chalk.yellow.bold('WARNING!')} The generator will now stop.`);
                         process.exit(1);
                     }
                     done();
