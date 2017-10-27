@@ -6,6 +6,7 @@ const jhipsterConstants = require('generator-jhipster/generators/generator-const
 const exec = require('child_process').exec;
 const parseStringSync = require('xml2js-parser').parseStringSync;
 const fs = require('fs');
+const opn = require('opn');
 const unidecode = require("unidecode");
 const dbPlans = {
     postgresql:[
@@ -263,16 +264,30 @@ module.exports = class extends BaseGenerator {
     }
 
     install() {
-            const done = this.async();
-            exec('clever deploy', (err) => {
-                if (err) {
-                    this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
-                }
-                done();
-            });
+        var cleverConfig = this.fs.readJSON(".clever.json");
+        if (!cleverConfig) {
+            this.log('No existing clever cloud application');
+            this.cleverConfig = {apps:[]};
+        } else {
+            this.cleverConfig = cleverConfig;
+        }
+        var applicationId;
+        this.cleverConfig.apps.forEach((app) => {
+            if (app.alias == this.props.alias) {
+                applicationId = app.app_id;
+            }
+        });
+        const user = this.props.user.length  === 0 || !this.props.user.trim() ? "me": this.props.user;
+        const consoleURL = "https://console.clever-cloud.com/users/" + user + "/applications/" + applicationId + "/information";
+        opn(consoleURL);
+        this.log('Please make sure you tick the *Dedicated build instance* Checkbox.');
+        this.log('Now you can commit the file we have generated:');
+        this.log('git add clevercloud && git commit -m"add clevercloud support"');
+        this.log('And deploy your application to Clever cloud with: ');
+        this.log('clever deploy');
     }
 
     end() {
-        this.log('End of clevercloud generator');
+
     }
 };
