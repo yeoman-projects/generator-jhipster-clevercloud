@@ -246,7 +246,7 @@ module.exports = class extends BaseGenerator {
                 }
                 done();
             });
-            serviceLinkDone = this.async();
+            const serviceLinkDone = this.async();
             exec('clever service link-addon ' + this.baseName, (err) => {
                 if (err) {
                     this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
