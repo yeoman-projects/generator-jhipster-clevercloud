@@ -255,7 +255,7 @@ module.exports = class extends BaseGenerator {
             });
         }
         const prehookDone = this.async();
-        exec('clever env set CC_PRE_RUN_HOOK "cp ./clevercloud/application-clever.yml ./application-prod.yml"', (err) => {
+        exec('clever env set CC_PRE_RUN_HOOK "cp ./clevercloud/application-clevercloud.yml ./application-prod.yml"', (err) => {
             if (err) {
                 this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
             }
