@@ -246,17 +246,24 @@ module.exports = class extends BaseGenerator {
                 }
                 done();
             });
-            done = this.async();
+            serviceLinkDone = this.async();
             exec('clever service link-addon ' + this.baseName, (err) => {
                 if (err) {
                     this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
                 }
-                done();
+                serviceLinkDone();
             });
         }
     }
 
     install() {
+            const done = this.async();
+            exec('clever deploy', (err) => {
+                if (err) {
+                    this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
+                }
+                done();
+            });
     }
 
     end() {
