@@ -1,6 +1,6 @@
 {
   "name": "generator-jhipster-clevercloud",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Generates configuration file to run your JHipster project on Clever Cloud",
   "keywords": [
     "yeoman-generator",
