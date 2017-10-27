@@ -8,10 +8,30 @@ const parseStringSync = require('xml2js-parser').parseStringSync;
 const fs = require('fs');
 const unidecode = require("unidecode");
 const dbPlans = {
-    'postgresql':{name :"postgresql-addon"},
-    'mysql':{},
-    'mongodb':{}
+    postgresql:[
+                { name: 'DEV 	5 	10 MB 	Shared 	Shared 	0.00 €', value: 'dev', maxConnection: 5 },
+                { name: 'S 	10 	256 MB 	Shared 	Shared 	15.00 €	', value: 's', maxConnection: 10 },
+                { name: 'M 	75 	10 GB 	1 GB 	1 	45.00 €	', value: 'm', maxConnection: 75 },
+                { name: 'LM 	140 	50 GB 	1 GB 	2 	110.00 €', value: 'lm', maxConnection: 140 },
+                { name: 'L 	500 	200 GB 	2 GB 	2 	300.00 €', value: 'l', maxConnection: 500 },
+    ],
+    mysql:[
+                { name: 'DEV 	256 MB 	5 	Shared 	Shared 	0.00 €', value: 'dev' },
+                { name: 'S 	1 GB 	10 	Shared 	Shared 	10.00 €', value: 's' },
+                { name: 'M 	100 GB 	75 	1 GB 	1 	30.00 €', value: 'm' },
+                { name: 'LM 	150 GB 	150 	3 GB 	2 	100.00 €', value: 'lm' },
+                { name: 'L 	450 GB 	500 	8 GB 	4 	240.00 €', value: 'l' },
+                { name: 'XL 	600 GB 	750 	32 GB 	6 	700.00 €', value: 'xl' },
+    ],
+    mongodb:[
+                { name: 'Peanut 	500 MB 	    Shared 	0.00 € 	', value: 'peanut' },
+                { name: 'Hazelnut 	1 GB 	    512 MB 	20.00 € 	', value: 'hazelnut' },
+                { name: 'Shamrock 	5 GB 	    1 GB 	40.00 € 	', value: 'shamrock' },
+                { name: 'Vine 	30 GB 	    2 GB 	75.00 € 	', value: 'vine' },
+                { name: 'Gunnera 	100 GB 	    4 GB 	150.00 €', value: 'gunnera' }
+    ]
 };
+
 
 module.exports = class extends BaseGenerator {
     get initializing() {
@@ -119,40 +139,21 @@ module.exports = class extends BaseGenerator {
             type: 'list',
             name: 'dbPlan',
             message: 'Select your database plan\nPlan name 	Max DB size 	Memory 	Price',
-            choices: [
-                { name: 'Peanut 	500 MB 	    Shared 	0.00 € 	', value: 'peanut' },
-                { name: 'Hazelnut 	1 GB 	    512 MB 	20.00 € 	', value: 'hazelnut' },
-                { name: 'Shamrock 	5 GB 	    1 GB 	40.00 € 	', value: 'shamrock' },
-                { name: 'Vine 	30 GB 	    2 GB 	75.00 € 	', value: 'vine' },
-                { name: 'Gunnera 	100 GB 	    4 GB 	150.00 €', value: 'gunnera' }
-            ],
+            choices: dbPlans.mongodb,
             default: 'peanut'
         }, {
             when: response => response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'postgresql',
             type: 'list',
             name: 'dbPlan',
             message: 'Select your database plan\nPlan name 	Max connection limit 	Max db size 	Memory 	vCPUS 	Price',
-            choices: [
-                { name: 'DEV 	5 	10 MB 	Shared 	Shared 	0.00 €', value: 'dev' },
-                { name: 'S 	10 	256 MB 	Shared 	Shared 	15.00 €	', value: 's' },
-                { name: 'M 	75 	10 GB 	1 GB 	1 	45.00 €	', value: 'm' },
-                { name: 'LM 	140 	50 GB 	1 GB 	2 	110.00 €', value: 'lm' },
-                { name: 'L 	500 	200 GB 	2 GB 	2 	300.00 €', value: 'l' },
-            ],
+            choices: dbPlans.postgresql,
             default: 'dev'
         }, {
             when: response => response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'mysql',
             type: 'list',
             name: 'dbPlan',
             message: 'Select your database plan\nPlan name 	Max connection limit 	Max db size 	Memory 	vCPUS 	Price',
-            choices: [
-                { name: 'DEV 	256 MB 	5 	Shared 	Shared 	0.00 €', value: 'dev' },
-                { name: 'S 	1 GB 	10 	Shared 	Shared 	10.00 €', value: 's' },
-                { name: 'M 	100 GB 	75 	1 GB 	1 	30.00 €', value: 'm' },
-                { name: 'LM 	150 GB 	150 	3 GB 	2 	100.00 €', value: 'lm' },
-                { name: 'L 	450 GB 	500 	8 GB 	4 	240.00 €', value: 'l' },
-                { name: 'XL 	600 GB 	750 	32 GB 	6 	700.00 €', value: 'xl' },
-            ],
+            choices: dbPlans.mysql,
             default: 'dev'
         }];
 
