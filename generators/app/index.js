@@ -4,10 +4,15 @@ const semver = require('semver');
 const BaseGenerator = require('generator-jhipster/generators/generator-base');
 const jhipsterConstants = require('generator-jhipster/generators/generator-constants');
 const exec = require('child_process').exec;
+const execSync = require('child_process').execSync;
 const parseStringSync = require('xml2js-parser').parseStringSync;
 const fs = require('fs');
 const opn = require('opn');
 const unidecode = require("unidecode");
+const clever = require("./api.js")();
+const Logger = require("./logger.js");
+const Bacon = require('baconjs');
+const supportedDatabases = ['postgresql','mysql','mongodb'];
 const dbPlans = {
     postgresql:[
                 { name: 'DEV 	5 	10 MB 	Shared 	Shared 	0.00 €', value: 'dev', maxConnection: 5 },
@@ -32,7 +37,9 @@ const dbPlans = {
                 { name: 'Gunnera 	100 GB 	    4 GB 	150.00 €', value: 'gunnera' }
     ]
 };
-
+var client;
+var organisations;
+var appChoices;
 
 module.exports = class extends BaseGenerator {
     get initializing() {
@@ -65,30 +72,46 @@ module.exports = class extends BaseGenerator {
                     }
                     done();
                 });
+            },
+            setAPIClient() {
+                return clever.first().toPromise().then(function (api){
+                    client = api;
+                });
+            },
+            setOrganisations() {
+                return client.summary.get().send().map(".organisations").flatMapLatest(function(orgs) {
+                    if(orgs.length === 0) {
+                        return Bacon.once(new Bacon.Error("Organisation not found"));
+                    } else {
+                        var o = orgs.map((org) => {return {value:org.id, name:org.name};});
+                        organisations = o;
+                    }
+                }).toPromise();
+            },
+            setLinkedApplications() {
+                var cleverConfig = this.fs.readJSON(".clever.json");
+                if (!cleverConfig) {
+                    this.cleverConfig = {apps:[]};
+                } else {
+                    this.cleverConfig = cleverConfig;
+                }
+                appChoices = this.cleverConfig.apps.map((app) => {return { name: app.name, value: app.alias};} );
             }
         };
     }
 
     prompting() {
-        var cleverConfig = this.fs.readJSON(".clever.json");
-        if (!cleverConfig) {
-            this.log('No existing clever cloud application');
-            this.cleverConfig = {apps:[]};
-        } else {
-            this.cleverConfig = cleverConfig;
-            this.log(this.cleverConfig.apps);
-        }
-        const appChoices = this.cleverConfig.apps.map((app) => {return { name: app.name, value: app.alias};} );
-        const done = this.async();
-        const supportedDatabases = ['postgresql','mysql','mongodb'];
         if (supportedDatabases.indexOf(this.jhipsterAppConfig.prodDatabaseType) == -1) {
             this.log('The database you are using is currently unsupported by Clever Cloud.');
         }
+        const done = this.async();
         const prompts = [
         {
-            type: 'input',
+            when: response => organisations,
+            type: 'list',
             name: 'user',
-            message: 'Deploy as OrganizationId or UserId (leave empty for personal space):',
+            message: 'Deploy as Organization or User:',
+            choices: organisations,
             store: true
         }, {
             type: 'list',
@@ -188,7 +211,7 @@ module.exports = class extends BaseGenerator {
 
         // variable from questions
         this.message = this.props.message;
-        const organizationSegment = this.props.user.length  === 0 || !this.props.user.trim()?"": " -o " + this.props.user + " ";
+        const organizationSegment = this.props.user.startsWith("user")?"": " -o " + this.props.user + " ";
         const aliasSegment = " -a " + this.props.alias + " "; 
         const appRegion = this.props.region == "eu" ? "par" :"mtl" ;
         const appRegionSegment = " --region " + appRegion + " ";
