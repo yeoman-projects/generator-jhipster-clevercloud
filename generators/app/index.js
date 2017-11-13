@@ -220,14 +220,7 @@ module.exports = class extends BaseGenerator {
             this.version = jsPom.project.version;  
             this.template('_maven.json', 'clevercloud/maven.json');
             if (!this.props.useExistingApp) {
-                const done = this.async();
-                exec('clever create --type maven ' + appRegionSegment + organizationSegment + aliasSegment + this.props.appName, (err) => {
-                    if (err) {
-                        this.error(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
-                        this.error(err);
-                    }
-                    done();
-                });
+                var msg = execSync('clever create --type maven ' + appRegionSegment + organizationSegment + aliasSegment + this.props.appName);
             }
         }
         if (this.buildTool === 'gradle') {
@@ -261,32 +254,14 @@ module.exports = class extends BaseGenerator {
         this.template('_application-clevercloud.yml', 'clevercloud/application-clevercloud.yml');
         if (this.props.dbPlan) {
             const addonRegionSegment = " --region " + this.props.region + " ";
-            const done = this.async();
-            exec('clever addon create '+ this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + this.baseName, (err) => {
-                if (err) {
-                    this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
-                }
-                done();
-            });
-            const serviceLinkDone = this.async();
-            exec('clever service link-addon ' + this.baseName, (err) => {
-                if (err) {
-                    this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
-                }
-                serviceLinkDone();
-            });
+            execSync('clever addon create ' + aliasSegment + organizationSegment + this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + this.baseName);
+            execSync('clever service link-addon ' + this.baseName + aliasSegment);
         }
-        const prehookDone = this.async();
-        exec('clever env set CC_PRE_RUN_HOOK "cp ./clevercloud/application-clevercloud.yml ./application-prod.yml"', (err) => {
-            if (err) {
-                this.log(`${chalk.yellow.bold('WARNING!')} Something went wrong.`);
-            }
-            prehookDone();
-        });
+        execSync('clever env set CC_PRE_RUN_HOOK "cp ./clevercloud/application-clevercloud.yml ./application-prod.yml"' + aliasSegment);
     }
 
     install() {
-        var cleverConfig = this.fs.readJSON(".clever.json");
+        var cleverConfig = JSON.parse(fs.readFileSync(".clever.json"));
         if (!cleverConfig) {
             this.log('No existing clever cloud application');
             this.cleverConfig = {apps:[]};
