@@ -254,7 +254,7 @@ module.exports = class extends BaseGenerator {
         this.template('_application-clevercloud.yml', 'clevercloud/application-clevercloud.yml');
         if (this.props.dbPlan) {
             const addonRegionSegment = " --region " + this.props.region + " ";
-            execSync('clever addon create ' + aliasSegment + organizationSegment + this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + this.baseName);
+            execSync('clever addon create ' + organizationSegment + this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + this.baseName);
             execSync('clever service link-addon ' + this.baseName + aliasSegment);
         }
         execSync('clever env set CC_PRE_RUN_HOOK "cp ./clevercloud/application-clevercloud.yml ./application-prod.yml"' + aliasSegment);
