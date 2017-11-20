@@ -40,7 +40,34 @@ const dbPlans = {
 var client;
 var organisations;
 var appChoices;
-
+var organisationAddons;
+const createDBPrompt = { name: `Create a new DB`, value: {create:true} };
+getOrganisationAddons = function(orgaId, addonType) {
+    return client.owner(orgaId).addons.get().withParams(orgaId ? [orgaId] : []).send().
+        flatMapLatest(function(addons) {
+            organisationAddons = addons.filter((a) => {
+                return (a.provider.id == (addonType+"-addon"));
+            }).map((a) => {
+                return {name:a.name,value:{id:a.id, create:false}};
+            });
+            organisationAddons.push(createDBPrompt);
+        }).toPromise();
+};
+getCleverConfig = function() {
+    return fs.existsSync(".clever.json")?
+        JSON.parse(fs.readFileSync(".clever.json"))
+        :{apps:[]};
+}
+getCurrentApplicationId = function(appName){
+    var applicationid;
+    var cleverConfig = getCleverConfig();
+    cleverConfig.apps.forEach((app) => {
+        if (app.alias == appName) {
+            applicationid = app.app_id;
+        }
+    });
+    return applicationid;
+}
 module.exports = class extends BaseGenerator {
     get initializing() {
         return {
@@ -89,21 +116,12 @@ module.exports = class extends BaseGenerator {
                 }).toPromise();
             },
             setLinkedApplications() {
-                var cleverConfig = this.fs.readJSON(".clever.json");
-                if (!cleverConfig) {
-                    this.cleverConfig = {apps:[]};
-                } else {
-                    this.cleverConfig = cleverConfig;
-                }
-                appChoices = this.cleverConfig.apps.map((app) => {return { name: app.name, value: app.alias};} );
+                appChoices = getCleverConfig().apps.map((app) => {return { name: app.name, value: app.alias};} );
             }
         };
     }
 
-    prompting() {
-        if (supportedDatabases.indexOf(this.jhipsterAppConfig.prodDatabaseType) == -1) {
-            this.log('The database you are using is currently unsupported by Clever Cloud.');
-        }
+    promptOrgAndApp() {
         const done = this.async();
         const prompts = [
         {
@@ -148,37 +166,6 @@ module.exports = class extends BaseGenerator {
             name: 'appName',
             message: 'Name to deploy as:',
             default: this.jhipsterAppConfig.baseName
-        }, {
-            when: response => supportedDatabases,
-            type: 'list',
-            name: 'dbManaged',
-            message: 'Do you want Clever Cloud to manage your Database:',
-            choices: [
-                { name: `Yes`, value: true },
-                { name: 'No', value: false },
-            ],
-            default: true
-        }, {
-            when: response => response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'mongodb',
-            type: 'list',
-            name: 'dbPlan',
-            message: 'Select your database plan\nPlan name 	Max DB size 	Memory 	Price',
-            choices: dbPlans.mongodb,
-            default: 'peanut'
-        }, {
-            when: response => response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'postgresql',
-            type: 'list',
-            name: 'dbPlan',
-            message: 'Select your database plan\nPlan name 	Max connection limit 	Max db size 	Memory 	vCPUS 	Price',
-            choices: dbPlans.postgresql,
-            default: 'dev'
-        }, {
-            when: response => response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'mysql',
-            type: 'list',
-            name: 'dbPlan',
-            message: 'Select your database plan\nPlan name 	Max connection limit 	Max db size 	Memory 	vCPUS 	Price',
-            choices: dbPlans.mysql,
-            default: 'dev'
         }];
         this.prompt(prompts).then((props) => {
             this.props = props;
@@ -192,9 +179,59 @@ module.exports = class extends BaseGenerator {
             done();
         });
     }
+    initAddons(){
+         return getOrganisationAddons(this.props.user, this.jhipsterAppConfig.prodDatabaseType);
+    }
+    promptDB() {
+        if (supportedDatabases.indexOf(this.jhipsterAppConfig.prodDatabaseType) == -1) {
+            this.log('The database you are using is currently unsupported by Clever Cloud.');
+        }
+        const done = this.async();
+        const prompts = [ {
+            when: response => supportedDatabases,
+            type: 'list',
+            name: 'dbManaged',
+            message: 'Do you want Clever Cloud to manage your Database:',
+            choices: [
+                { name: `Yes`, value: true },
+                { name: 'No', value: false },
+            ],
+            default: true
+        }, {
+            when: response => response.dbManaged,
+            type: 'list',
+            name: 'createDB',
+            message: 'Do you want Clever Cloud to create a new database?:',
+            choices: organisationAddons,
+        }, {
+            when: response => response.createDB && response.createDB.create && response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'mongodb',
+            type: 'list',
+            name: 'dbPlan',
+            message: 'Select your database plan\nPlan name 	Max DB size 	Memory 	Price',
+            choices: dbPlans.mongodb,
+            default: 'peanut'
+        }, {
+            when: response => response.createDB && response.createDB.create && response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'postgresql',
+            type: 'list',
+            name: 'dbPlan',
+            message: 'Select your database plan\nPlan name 	Max connection limit 	Max db size 	Memory 	vCPUS 	Price',
+            choices: dbPlans.postgresql,
+            default: 'dev'
+        }, {
+            when: response => response.createDB && response.createDB.create && response.dbManaged && this.jhipsterAppConfig.prodDatabaseType === 'mysql',
+            type: 'list',
+            name: 'dbPlan',
+            message: 'Select your database plan\nPlan name 	Max connection limit 	Max db size 	Memory 	vCPUS 	Price',
+            choices: dbPlans.mysql,
+            default: 'dev'
+        }];
+        this.prompt(prompts).then((props) => {
+            this.props = Object.assign({},this.props, props);
+            done();
+        });
+    }
 
     writing() {
-        // function to use directly template
         this.template = function (source, destination) {
             this.fs.copyTpl(
                 this.templatePath(source),
@@ -202,7 +239,6 @@ module.exports = class extends BaseGenerator {
                 this
             );
         };
-
         // read config from .yo-rc.json
         this.baseName = this.jhipsterAppConfig.baseName;
         this.buildTool = this.jhipsterAppConfig.buildTool;
@@ -254,38 +290,37 @@ module.exports = class extends BaseGenerator {
         this.template('_application-clevercloud.yml', 'clevercloud/application-clevercloud.yml');
         if (this.props.dbPlan) {
             const addonRegionSegment = " --region " + this.props.region + " ";
-            execSync('clever addon create ' + organizationSegment + this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + this.baseName);
-            execSync('clever service link-addon ' + this.baseName + aliasSegment);
+            const addonName = "'[JHipster]["+this.props.dbPlan+"] "+ this.props.appName + "'";
+            execSync('clever addon create ' + organizationSegment + this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + addonName);
+            execSync('clever service link-addon ' + addonName + aliasSegment);
+        }
+        if (this.props.createDB ) {
+            if (!this.props.createDB.create) execSync('clever service link-addon ' + this.props.createDB.id + aliasSegment);
         }
         execSync('clever env set CC_PRE_RUN_HOOK "cp ./clevercloud/application-clevercloud.yml ./application-prod.yml"' + aliasSegment);
     }
 
-    install() {
-        var cleverConfig = JSON.parse(fs.readFileSync(".clever.json"));
-        if (!cleverConfig) {
-            this.log('No existing clever cloud application');
-            this.cleverConfig = {apps:[]};
-        } else {
-            this.cleverConfig = cleverConfig;
-        }
-        var applicationId;
-        this.cleverConfig.apps.forEach((app) => {
-            if (app.alias == this.props.alias) {
-                applicationId = app.app_id;
-            }
-        });
+
+    install(){
+        var applicationId = getCurrentApplicationId(this.props.alias);
+        return client.owner(this.props.user).applications._.put()
+            .withParams( [this.props.user, applicationId])
+            .send(JSON.stringify({separateBuild:true})).toPromise();
+    }
+
+    end() {
+        var applicationId =  getCurrentApplicationId(this.props.alias);
         const user = this.props.user.startsWith("user") ?
           "users/me": "organisations/"+this.props.user;
-        const consoleURL = "https://console.clever-cloud.com/" + user + "/applications/" + applicationId + "/information";
-        opn(consoleURL);
-        this.log(`Please make sure you tick the ${chalk.bold.cyan('Dedicated build instance')} Checkbox.`);
+        const consoleURL = "https://console.clever-cloud.com/" + user + "/applications/" + applicationId;
         this.log('Now you can commit the file we have generated by running:');
         this.log(`  ${chalk.bold.cyan('git add clevercloud && git commit -m"add clevercloud support"')}`);
         this.log('And deploy your application to Clever cloud with: ');
         this.log(`  ${chalk.bold.cyan('clever deploy')}`);
+        this.log('Then you can open your application with:');
+        this.log(`  ${chalk.bold.cyan('clever open')}`);
+        this.log("Your can also access the app on Clever Cloud's web console by visiting:");
+        this.log(`  ${chalk.bold.cyan(consoleURL)}`);
     }
 
-    end() {
-
-    }
 };
