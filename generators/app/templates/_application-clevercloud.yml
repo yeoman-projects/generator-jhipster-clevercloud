@@ -6,7 +6,7 @@ spring:
         username: ${POSTGRESQL_ADDON_USER}
         password: ${POSTGRESQL_ADDON_PASSWORD}
         hikari:
-            maximumPoolSize: 8
+            maximumPoolSize: <%=maxConnections %>
 <%_ } else if (prodDatabaseType === 'mysql') { _%>
     datasource:
         type: com.zaxxer.hikari.HikariDataSource        
@@ -14,7 +14,7 @@ spring:
         username: ${MYSQL_ADDON_USER}
         password: ${MYSQL_ADDON_PASSWORD}
         hikari:
-            maximumPoolSize: 8
+            maximumPoolSize: <%=maxConnections %>
 <%_ } else if (prodDatabaseType === 'mongodb') { _%>
     data:
         mongodb:

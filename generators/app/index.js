@@ -22,12 +22,12 @@ const dbPlans = {
                 { name: 'L 	500 	200 GB 	2 GB 	2 	300.00 €', value: 'l', maxConnection: 500 },
     ],
     mysql:[
-                { name: 'DEV 	256 MB 	5 	Shared 	Shared 	0.00 €', value: 'dev' },
-                { name: 'S 	1 GB 	10 	Shared 	Shared 	10.00 €', value: 's' },
-                { name: 'M 	100 GB 	75 	1 GB 	1 	30.00 €', value: 'm' },
-                { name: 'LM 	150 GB 	150 	3 GB 	2 	100.00 €', value: 'lm' },
-                { name: 'L 	450 GB 	500 	8 GB 	4 	240.00 €', value: 'l' },
-                { name: 'XL 	600 GB 	750 	32 GB 	6 	700.00 €', value: 'xl' },
+                { name: 'DEV 	256 MB 	5 	Shared 	Shared 	0.00 €', value: 'dev', },
+                { name: 'S 	1 GB 	10 	Shared 	Shared 	10.00 €', value: 's', maxConnection: 10 },
+                { name: 'M 	100 GB 	75 	1 GB 	1 	30.00 €', value: 'm', maxConnection: 75 },
+                { name: 'LM 	150 GB 	150 	3 GB 	2 	100.00 €', value: 'lm', maxConnection: 150 },
+                { name: 'L 	450 GB 	500 	8 GB 	4 	240.00 €', value: 'l', maxConnection: 500 },
+                { name: 'XL 	600 GB 	750 	32 GB 	6 	700.00 €', value: 'xl', maxConnection: 750 },
     ],
     mongodb:[
                 { name: 'Peanut 	500 MB 	    Shared 	0.00 € 	', value: 'peanut' },
@@ -48,7 +48,7 @@ getOrganisationAddons = function(orgaId, addonType) {
             organisationAddons = addons.filter((a) => {
                 return (a.provider.id == (addonType+"-addon"));
             }).map((a) => {
-                return {name:a.name,value:{id:a.id, create:false}};
+                return {name:a.name,value:{id:a.id, create:false, plan : a.plan.slug}};
             });
             organisationAddons.push(createDBPrompt);
         }).toPromise();
@@ -227,6 +227,9 @@ module.exports = class extends BaseGenerator {
         }];
         this.prompt(prompts).then((props) => {
             this.props = Object.assign({},this.props, props);
+            if (!this.props.dbPlan) {
+                this.props.dbPlan = this.props.createDB.plan;
+            }
             done();
         });
     }
@@ -243,7 +246,9 @@ module.exports = class extends BaseGenerator {
         this.baseName = this.jhipsterAppConfig.baseName;
         this.buildTool = this.jhipsterAppConfig.buildTool;
         this.prodDatabaseType = this.jhipsterAppConfig.prodDatabaseType;
-
+        const currentDBPlan = dbPlans[this.jhipsterAppConfig.prodDatabaseType].
+          filter((p) => {return p.value == this.props.dbPlan})[0];
+        currentDBPlan.maxConnection ? this.maxConnections = Math.floor((currentDBPlan.maxConnection) / 2): this.maxConnections = 0;
         // variable from questions
         this.message = this.props.message;
         const organizationSegment = this.props.user.startsWith("user")?"": " -o " + this.props.user + " ";
@@ -288,7 +293,7 @@ module.exports = class extends BaseGenerator {
                 });
         }
         this.template('_application-clevercloud.yml', 'clevercloud/application-clevercloud.yml');
-        if (this.props.dbPlan) {
+        if (this.props.createDB && this.props.createDB.create && this.props.dbPlan) {
             const addonRegionSegment = " --region " + this.props.region + " ";
             const addonName = "'[JHipster]["+this.props.dbPlan+"] "+ this.props.appName + "'";
             execSync('clever addon create ' + organizationSegment + this.prodDatabaseType + '-addon '+'--plan ' + this.props.dbPlan + ' ' + addonRegionSegment + addonName);
