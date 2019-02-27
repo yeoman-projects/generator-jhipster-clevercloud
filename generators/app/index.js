@@ -310,7 +310,7 @@ module.exports = class extends BaseGenerator {
         var applicationId = getCurrentApplicationId(this.props.alias);
         return client.owner(this.props.user).applications._.put()
             .withParams( [this.props.user, applicationId])
-            .send(JSON.stringify({separateBuild:true})).toPromise().toPromise().catch(error => {
+            .send(JSON.stringify({separateBuild:true})).toPromise().catch(error => {
                 this.log(`${chalk.yellow.bold('WARNING!')} Unable to dedicated build instance.`);
             });
     }
